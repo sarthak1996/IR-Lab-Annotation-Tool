@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Annotation Tool</string>
+    <string name="gujrati_connective_description">Description</string>
+    <string name="search">Search Documents</string>
+</resources>

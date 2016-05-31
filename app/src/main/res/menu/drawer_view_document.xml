@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/navigation_item_Content_Document"
+            android:checked="true"
+            android:title="Content" />
+        <item
+            android:id="@+id/navigation_item_List_Document"
+            android:title="Back To Documents" />
+        <item
+            android:id="@+id/navigation_item_relationName_relationAttrs"
+            android:title="Relation Name" />
+        <item
+            android:id="@+id/navigation_item_relationSense_relationAttrs"
+            android:title="Relation Sense" />
+
+        <item
+            android:id="@+id/navigation_item_connective_relationAttrs"
+            android:title="Connective" />
+        <item
+            android:id="@+id/navigation_item_arg1_relationAttrs"
+            android:title="Arg1" />
+        <item
+            android:id="@+id/navigation_item_arg2_relationAttrs"
+            android:title="Arg2" />
+        <item
+            android:id="@+id/navigation_item_SignOut"
+            android:title="Sign Out" />
+
+
+    </group>
+
+</menu>
