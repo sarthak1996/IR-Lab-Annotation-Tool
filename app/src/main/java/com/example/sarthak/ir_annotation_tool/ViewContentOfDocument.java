@@ -4,7 +4,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.BitmapFactory;
 import android.graphics.Typeface;
-import android.hardware.SensorEvent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -14,7 +14,6 @@ import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.Toolbar;
 import android.text.Layout;
 import android.text.Spannable;
@@ -46,15 +45,11 @@ import com.google.gson.Gson;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+
+import cn.pedant.SweetAlert.SweetAlertDialog;
 
 /**
  * Created by sarthak on 20/5/16.
@@ -63,9 +58,9 @@ public class ViewContentOfDocument extends AppCompatActivity {
     private DrawerLayout drawerLayout;
     private NavigationView navigationView;
     private Toolbar toolbar;
+    private int index;
+    private int removeIndex;
     private String content = "";
-    private int selectionStart = -1;
-    private int selectionEnd = -1;
     private TextView textViewContent;
     private String docId;
     private Relation relation;
@@ -78,7 +73,9 @@ public class ViewContentOfDocument extends AppCompatActivity {
     private MenuItem deleteAttr;
     private SharedPreferences sharedPreferences;
     private String doc_name;
-    private String font="NotoSansGujarati-Regular.ttf";
+    private String typeClicked = "";
+    private String font = "NotoSansGujarati-Regular.ttf";
+    private SweetAlertDialog pdialog;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -89,7 +86,7 @@ public class ViewContentOfDocument extends AppCompatActivity {
             docId = intent.getStringExtra(Config.docId);
             doc_name = intent.getStringExtra(Config.docName);
             initialiseElements();
-            SharedPreferences.Editor editor=relationSharedPreferences.edit();
+            SharedPreferences.Editor editor = relationSharedPreferences.edit();
             editor.remove(Config.savedRelation);
             Typeface gujaratiTypeface = Typeface.createFromAsset(getAssets(), font);
             textViewContent.setTypeface(gujaratiTypeface);
@@ -105,9 +102,6 @@ public class ViewContentOfDocument extends AppCompatActivity {
         actionBar.setTitle("Content");
 
 
-
-
-
         navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
                                                              @Override
                                                              public boolean onNavigationItemSelected(MenuItem menuItem) {
@@ -115,14 +109,17 @@ public class ViewContentOfDocument extends AppCompatActivity {
                                                                  drawerLayout.closeDrawers();
                                                                  switch (menuItem.getItemId()) {
                                                                      case R.id.navigation_item_connective_relationAttrs:
+                                                                         typeClicked = "connective";
                                                                          getConnectives();
                                                                          highlightConnectives();
                                                                          return true;
                                                                      case R.id.navigation_item_arg1_relationAttrs:
+                                                                         typeClicked = "arg1";
                                                                          getArg1s();
                                                                          highlightArg1();
                                                                          return true;
                                                                      case R.id.navigation_item_arg2_relationAttrs:
+                                                                         typeClicked = "arg2";
                                                                          getArg2s();
                                                                          highlightArg2();
                                                                          return true;
@@ -244,7 +241,7 @@ public class ViewContentOfDocument extends AppCompatActivity {
         textViewContent.setText(content);
         textViewContent.setCustomSelectionActionModeCallback(new
 
-                AdditionalMenuForRelations(ViewContentOfDocument.this,docId,textViewContent,floatingActionButton)
+                AdditionalMenuForRelations(ViewContentOfDocument.this, docId, textViewContent, floatingActionButton)
 
         );
         textViewContent.setOnTouchListener(new View.OnTouchListener()
@@ -260,16 +257,50 @@ public class ViewContentOfDocument extends AppCompatActivity {
                                                        int offset = layout.getOffsetForHorizontal(line, x);
                                                        Log.v("index", "" + offset);
                                                        int flag = -1;
-                                                       for (int i = 0; i < connectives.size(); i++) {
-                                                           if (connectives.get(i).getStart() <= offset && offset <= connectives.get(i).getEnd()) {
-                                                               flag = i;
-                                                               break;
+
+                                                       index = flag;
+                                                       if (typeClicked.equals("connective")) {
+                                                           getConnectives();
+                                                           for (int i = 0; i < connectives.size(); i++) {
+                                                               if (connectives.get(i).getStart() <= offset && offset <= connectives.get(i).getEnd()) {
+                                                                   flag = i;
+                                                                   break;
+                                                               }
                                                            }
-                                                       }
-                                                       if (flag != -1) {
-                                                           deleteAttr.setVisible(true);
-                                                       } else {
-                                                           deleteAttr.setVisible(false);
+                                                           if (flag != -1) {
+                                                               removeIndex = flag;
+                                                               deleteAttr.setVisible(true);
+                                                           } else {
+                                                               deleteAttr.setVisible(false);
+                                                           }
+                                                       } else if (typeClicked.equals("arg1")) {
+                                                           getArg1s();
+                                                           for (int i = 0; i < arg1.size(); i++) {
+                                                               if (arg1.get(i).getStart() <= offset && offset <= arg1.get(i).getEnd()) {
+                                                                   flag = i;
+                                                                   break;
+                                                               }
+                                                           }
+                                                           if (flag != -1) {
+                                                               removeIndex = flag;
+                                                               deleteAttr.setVisible(true);
+                                                           } else {
+                                                               deleteAttr.setVisible(false);
+                                                           }
+                                                       } else if (typeClicked.equals("arg2")) {
+                                                           getArg2s();
+                                                           for (int i = 0; i < arg2.size(); i++) {
+                                                               if (arg2.get(i).getStart() <= offset && offset <= arg2.get(i).getEnd()) {
+                                                                   flag = i;
+                                                                   break;
+                                                               }
+                                                           }
+                                                           if (flag != -1) {
+                                                               removeIndex = flag;
+                                                               deleteAttr.setVisible(true);
+                                                           } else {
+                                                               deleteAttr.setVisible(false);
+                                                           }
                                                        }
                                                    }
                                                    return false;
@@ -284,7 +315,6 @@ public class ViewContentOfDocument extends AppCompatActivity {
                                                 {
                                                     @Override
                                                     public void onClick(View v) {
-                                                        Toast.makeText(ViewContentOfDocument.this, ""+textViewContent.getSelectionStart()+","+textViewContent.getSelectionEnd(), Toast.LENGTH_SHORT).show();
                                                         if (relation.isFilled()) {
                                                             updateRelation();
                                                             saveRelationToDatabase();
@@ -303,7 +333,7 @@ public class ViewContentOfDocument extends AppCompatActivity {
                                                                             EditText editTextRelationSense = (EditText) dialog.getCustomView().findViewById(R.id.editText_RelationSense);
                                                                             int checked = radioGroup.getCheckedRadioButtonId();
                                                                             String relationSense = editTextRelationSense.getText().toString();
-                                                                            if (checked!=-1) {
+                                                                            if (checked != -1) {
                                                                                 if (relationSense != null && !relationSense.isEmpty() && !relationSense.equals("")) {
                                                                                     switch (checked) {
                                                                                         case R.id.explicit_relation:
@@ -360,64 +390,78 @@ public class ViewContentOfDocument extends AppCompatActivity {
     }
 
     private int getSelectionEnd() {
-        //Toast.makeText(ViewContentOfDocument.this, ""+textViewContent.getSelectionEnd(), Toast.LENGTH_SHORT).show();
-        SharedPreferences pref=getSharedPreferences(Config.sentenceFolder,MODE_PRIVATE);
-        SharedPreferences.Editor editor=pref.edit();
-        editor.putInt(Config.savedSentenceStart,textViewContent.getSelectionStart());
+        SharedPreferences pref = getSharedPreferences(Config.sentenceFolder, MODE_PRIVATE);
+        SharedPreferences.Editor editor = pref.edit();
+        editor.putInt(Config.savedSentenceStart, textViewContent.getSelectionStart());
         editor.commit();
         return textViewContent.getSelectionEnd();
     }
-    private int getSelectionStart(){
-        SharedPreferences pref=getSharedPreferences(Config.sentenceFolder,MODE_PRIVATE);
-        SharedPreferences.Editor editor=pref.edit();
-        editor.putInt(Config.savedSentenceEnd,textViewContent.getSelectionEnd());
+
+    private int getSelectionStart() {
+        SharedPreferences pref = getSharedPreferences(Config.sentenceFolder, MODE_PRIVATE);
+        SharedPreferences.Editor editor = pref.edit();
+        editor.putInt(Config.savedSentenceEnd, textViewContent.getSelectionEnd());
         editor.commit();
         return textViewContent.getSelectionStart();
     }
 
+    class AsyncFetchContent extends AsyncTask<Void, Void, Void> {
+
+        @Override
+        protected void onPreExecute() {
+            pdialog.setTitleText("Fetching content");
+            pdialog.show();
+            super.onPreExecute();
+        }
+
+        @Override
+        protected Void doInBackground(Void... param) {
+            String url = Config.baseIp + "/gujarati_connective/Android/getDocumentContent.php";
+            String tag_json_req = "json_request";
+            final Map<String, String> params = new HashMap<String, String>();
+            params.put("username", sharedPreferences.getString(Config.userName, ""));
+            params.put("password", sharedPreferences.getString(Config.password, ""));
+            //params.put("doc_path", "/media/Annotation_Interface/data/raw/a");
+            params.put("doc_path", docId);
+
+            StringRequest stringRequest = new StringRequest(Request.Method.POST, url, new Response.Listener<String>() {
+                @Override
+                public void onResponse(String response) {
+                    content = response;
+                    Log.d("Content", "here" + response);
+                    Typeface gujaratiTypeface = Typeface.createFromAsset(getAssets(), font);
+                    textViewContent.setTypeface(gujaratiTypeface);
+                    textViewContent.setText(content);
+                    SharedPreferences.Editor editor = relationSharedPreferences.edit();
+                    editor.putString(Config.contentOfDocument, content);
+                    editor.commit();
+
+                }
+            }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    Toast.makeText(ViewContentOfDocument.this, "" + error.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            }) {
+                @Override
+                protected Map<String, String> getParams() throws AuthFailureError {
+                    return params;
+                }
+            };
+            VolleyAppController.getInstance().addToRequestQueue(stringRequest, tag_json_req);
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            pdialog.hide();
+            super.onPostExecute(aVoid);
+
+        }
+    }
+
     private void fetchContent() {
-        String url = Config.baseIp + "/gujarati_connective/Android/getDocumentContent.php";
-        String tag_json_req = "json_request";
-        final Map<String, String> params = new HashMap<String, String>();
-        params.put("username", sharedPreferences.getString(Config.userName, ""));
-        params.put("password", sharedPreferences.getString(Config.password, ""));
-        //params.put("doc_path", "/media/Annotation_Interface/data/raw/a");
-        params.put("doc_path", docId);
-        Log.d("Url DOc", "d" + sharedPreferences.getString(Config.userName, "") + "v" + sharedPreferences.getString(Config.password, ""));
-//
-        StringRequest stringRequest = new StringRequest(Request.Method.POST, url, new Response.Listener<String>() {
-            @Override
-            public void onResponse(String response) {
-                content = response;
-                Log.d("Content", "here" + response);
-                Typeface gujaratiTypeface = Typeface.createFromAsset(getAssets(),font);
-                textViewContent.setTypeface(gujaratiTypeface);
-//                content="અમદાવાદ, સોમવાર\n" +
-//                        "અમરાઇવાડી તેમજ નોબલનગર ખાતે ગઇકાલે જુદાજુદા સમયે બનેલા જીવલેણ હુમલાના બનાવમાં બે વ્યક્તિઓને ઈજાઓ પહોંચતા તેમને તાત્કાલિક સારવાર માટે હોસ્પિટલ ખાતે દાખલ કરવામાં આવી હતી.\n" +
-//                        "અમરાઇવાડીની ઘટનામાં ધંધાકીય અદાવત ને નોબલનગરમાં પ્રેમ પ્રકરણ કારણભૂત\n" +
-//                        "પોલીસ સુત્રો દ્વારા જાણવા મળ્યા મુજબ અમરાઇવાડી શ્રીનાથનગર ખાતે રહેતા જશબીરસીંગ રામસીંગ ગીલ (ઉ.વ. ૩૨) ઉપર તેમની બાજુમાં રહેતા હલબારસીંગ મુખત્યારસીંગ સરદારે ગઇકાલે બપોરે ૨ વાગે તેમના ઘર પાછળ આવેલી ઈંડાની દુકાન આગળ ધંધાકીય અદાવતને લીધે ગુપ્તીથી હુમલો કરીને તેમને ગંભીર ઈજા પહોંચાડી હતી. આથી જશબીરસીંગને તાત્કાલિક સારવાર માટે એલ.જી. હોસ્પિટલ ખાતે દાખલ કરીને અમરાઇવાડી પોલીસે ગુનો નોંધીને વધુ તપાસ હાથ ધરી છે.\n" +
-//                        "જ્યારે નોબલનગર સુતરના કારખાના પાસે ઈન્દીરાનગરના છાપરા ખાતે રહેતા કેશરબેન ભગાજી ઠાકોરની પુત્રીએ છારા યુવાન સાથે લગ્ન કરી લેતા ઉશ્કેરાયેલા કેશરબેનના જેઠ તેમજ દિયરો (૧) ખયાજી ધારસીંગ ઠાકોર, (૨) બાવાજી ધારસીંગ ઠાકોર, (૩) દીનાજી ધારસીંગજી ઠાકોર, અને (૪) કરમણજી ધારસીંગજી ઠાકોર મળીને ગઇ તા. ૨૯મીની રાત્રે ૯.૩૦ વાગ્યાના સુમારે તેની ઉપર હુમલો કર્યો હતો અને ગડદાપાટુનો માર મારવા લાગ્યા હતા. દરમ્યાનમાં તેમની દેરાણી ત્યાં આવી પહોંચી હતી. તેને જોઇને કેશરબેને જણાવ્યું હતું કે મારી પુત્રીએ તેના મન પસંદ યુવક સાથે લગ્ન કરી લીધા તેમાં શું થઇ ગયું? આ સાંભળીને ખયાજી ઠાકોર એકદમ ઉશ્કેરાઇ ગયા હતા અને બાજુમાં પડેલો પ્રાયમસ ઉઠાવીને કેશરબેન ઉપર ફેંકતા કેશરબેન ગંભીર રીતે દાઝી જતાં તેમને તાત્કાલિક સારવાર માટે સિવિલ હોસ્પિટલ ખાતે ખસેડીને સરદારનગર પોલીસે વધુ તપાસ હાથ ધરી છે.\n" +
-//                        "3741";
-
-
-                textViewContent.setText(content);
-                SharedPreferences.Editor editor=relationSharedPreferences.edit();
-                editor.putString(Config.contentOfDocument,content);
-                editor.commit();
-                Toast.makeText(ViewContentOfDocument.this, "Showing content", Toast.LENGTH_SHORT).show();
-            }
-        }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                Toast.makeText(ViewContentOfDocument.this, "" + error.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        }) {
-            @Override
-            protected Map<String, String> getParams() throws AuthFailureError {
-                return params;
-            }
-        };
-        VolleyAppController.getInstance().addToRequestQueue(stringRequest, tag_json_req);
+        new AsyncFetchContent().execute();
 
     }
 
@@ -431,8 +475,9 @@ public class ViewContentOfDocument extends AppCompatActivity {
         arg1 = new ArrayList<>();
         arg2 = new ArrayList<>();
         relation = new Relation();
-        relationSharedPreferences=getSharedPreferences(Config.relationFolder,MODE_PRIVATE);
+        relationSharedPreferences = getSharedPreferences(Config.relationFolder, MODE_PRIVATE);
         sharedPreferences = getSharedPreferences(Config.loginPrefs, MODE_PRIVATE);
+        pdialog = new SweetAlertDialog(ViewContentOfDocument.this, SweetAlertDialog.PROGRESS_TYPE);
     }
 
     @Override
@@ -449,9 +494,57 @@ public class ViewContentOfDocument extends AppCompatActivity {
             case R.id.allRelationsMenu:
                 Intent intent = new Intent(ViewContentOfDocument.this, ListOfRelations.class);
                 intent.putExtra(Config.docId, docId);
-                intent.putExtra(Config.docName,doc_name);
+                intent.putExtra(Config.docName, doc_name);
                 startActivity(intent);
                 //finish();
+                return true;
+            case R.id.deleteAttrRelation:
+                if (typeClicked.equals("connective")) {
+                    String text = textViewContent.getText().toString();
+                    Spannable spannable = Spannable.Factory.getInstance().newSpannable(text);
+                    for (int i = 0; i < connectives.size(); i++) {
+                        if (i != removeIndex)
+                            spannable.setSpan(new BackgroundColorSpan(0x80FFFF00), connectives.get(i).getStart(), connectives.get(i).getEnd(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
+                    textViewContent.setText(spannable);
+                    Log.d("Size+=", "" + relation.getConnective().size());
+                    relation.getConnective().remove(removeIndex);
+                    Log.d("Size+=", "" + relation.getConnective().size());
+                    SharedPreferences.Editor editor = relationSharedPreferences.edit();
+                    Gson gson = new Gson();
+                    editor.putString(Config.savedRelation, gson.toJson(relation));
+                    editor.commit();
+                    getConnectives();
+                } else if (typeClicked.equals("arg1")) {
+
+                    String text = textViewContent.getText().toString();
+                    Spannable spannable = Spannable.Factory.getInstance().newSpannable(text);
+                    for (int i = 0; i < arg1.size(); i++) {
+                        if (i != removeIndex)
+                            spannable.setSpan(new BackgroundColorSpan(0x80FFFF00), arg1.get(i).getStart(), arg1.get(i).getEnd(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
+                    relation.getArg1().remove(removeIndex);
+                    SharedPreferences.Editor editor = relationSharedPreferences.edit();
+                    Gson gson = new Gson();
+                    editor.putString(Config.savedRelation, gson.toJson(relation));
+                    editor.commit();
+                    getArg1s();
+                } else if (typeClicked.equals("arg2")) {
+
+                    String text = textViewContent.getText().toString();
+                    Spannable spannable = Spannable.Factory.getInstance().newSpannable(text);
+                    for (int i = 0; i < arg2.size(); i++) {
+                        if (i != removeIndex)
+                            spannable.setSpan(new BackgroundColorSpan(0x80FFFF00), arg2.get(i).getStart(), arg2.get(i).getEnd(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
+                    relation.getArg2().remove(removeIndex);
+                    SharedPreferences.Editor editor = relationSharedPreferences.edit();
+                    Gson gson = new Gson();
+                    editor.putString(Config.savedRelation, gson.toJson(relation));
+                    editor.commit();
+                    getArg2s();
+                }
+                deleteAttr.setVisible(false);
                 return true;
         }
 
@@ -468,25 +561,28 @@ public class ViewContentOfDocument extends AppCompatActivity {
 
     private void getConnectives() {
         updateRelation();
-        connectives=relation.getConnective();
+        connectives = relation.getConnective();
 
     }
-    private void getArg1s(){
+
+    private void getArg1s() {
         updateRelation();
-        arg1=relation.getArg1();
+        arg1 = relation.getArg1();
     }
-    private void getArg2s(){
+
+    private void getArg2s() {
         updateRelation();
-        arg2=relation.getArg2();
+        arg2 = relation.getArg2();
     }
-    private void updateRelation(){
-        Gson gson=new Gson();
-        String temp=relationSharedPreferences.getString(Config.savedRelation,"");
-        if(temp!=null && !temp.isEmpty() && !temp.trim().equals("")) {
+
+    private void updateRelation() {
+        Gson gson = new Gson();
+        String temp = relationSharedPreferences.getString(Config.savedRelation, "");
+        if (temp != null && !temp.isEmpty() && !temp.trim().equals("")) {
             relation = gson.fromJson(temp, Relation.class);
-            Log.d("Connectives",relation.getConnective().toString());
-        }else{
-            relation=new Relation();
+            Log.d("Connectives", relation.getConnective().toString());
+        } else {
+            relation = new Relation();
         }
 
     }
@@ -520,47 +616,66 @@ public class ViewContentOfDocument extends AppCompatActivity {
         textViewContent.setText(spannable);
     }
 
-    private void saveRelationToDatabase() {
-        updateRelation();
-        Map<String, String> params = new HashMap<String, String>();
-        params.put("username", sharedPreferences.getString(Config.userName, ""));
-        params.put("password", sharedPreferences.getString(Config.password, ""));
-        params.put("user_name", sharedPreferences.getString(Config.userName, ""));
-        params.put("doc_name", doc_name);
-        params.put("relation_name", relation.getRelationName());
-        params.put("connective", format("connective"));
-        params.put("arg1", format("arg1"));
-        params.put("arg2", format("arg2"));
-        params.put("sense", relation.getRelationSense());
+    class AsyncSave extends AsyncTask<Void,Void,Void>{
 
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            pdialog.hide();
+            super.onPostExecute(aVoid);
+        }
 
-        String tag_json_req = "json_obj_req";
+        @Override
+        protected void onPreExecute() {
+            pdialog.setTitleText("Saving relation");
+            pdialog.show();
+            super.onPreExecute();
+        }
 
-        final String url = Config.baseIp + "/gujarati_connective/Android/addRelation.php";
-        CustomJsonObjectRequest jsonObjectRequest = new CustomJsonObjectRequest(Request.Method.POST, url, params, new Response.Listener<JSONObject>() {
-            @Override
-            public void onResponse(JSONObject response) {
-                try {
-                    if(response.getInt("success")==1){
-                        Toast.makeText(ViewContentOfDocument.this,response.getString("message"), Toast.LENGTH_SHORT).show();
-                        SharedPreferences.Editor editor=relationSharedPreferences.edit();
-                        editor.remove(Config.savedRelation);
-                        editor.commit();
-                    }else{
-                        Toast.makeText(ViewContentOfDocument.this,response.getString("message"), Toast.LENGTH_SHORT).show();
+        @Override
+        protected Void doInBackground(Void... param) {
+            updateRelation();
+            Map<String, String> params = new HashMap<String, String>();
+            params.put("username", sharedPreferences.getString(Config.userName, ""));
+            params.put("password", sharedPreferences.getString(Config.password, ""));
+            params.put("user_name", sharedPreferences.getString(Config.userName, ""));
+            params.put("doc_name", doc_name);
+            params.put("relation_name", relation.getRelationName());
+            params.put("connective", format("connective"));
+            params.put("arg1", format("arg1"));
+            params.put("arg2", format("arg2"));
+            params.put("sense", relation.getRelationSense());
+
+            String tag_json_req = "json_obj_req";
+            final String url = Config.baseIp + "/gujarati_connective/Android/addRelation.php";
+            CustomJsonObjectRequest jsonObjectRequest = new CustomJsonObjectRequest(Request.Method.POST, url, params, new Response.Listener<JSONObject>() {
+                @Override
+                public void onResponse(JSONObject response) {
+                    try {
+                        if (response.getInt("success") == 1) {
+                            Toast.makeText(ViewContentOfDocument.this, response.getString("message"), Toast.LENGTH_SHORT).show();
+                            SharedPreferences.Editor editor = relationSharedPreferences.edit();
+                            editor.remove(Config.savedRelation);
+                            editor.commit();
+                        } else {
+                            Toast.makeText(ViewContentOfDocument.this, response.getString("message"), Toast.LENGTH_SHORT).show();
+                        }
+                    } catch (JSONException e) {
+                        e.printStackTrace();
                     }
-                } catch (JSONException e) {
-                    e.printStackTrace();
                 }
-            }
-        }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                Toast.makeText(ViewContentOfDocument.this, "Could not connect to server", Toast.LENGTH_SHORT).show();
-            }
-        });
-        VolleyAppController.getInstance().addToRequestQueue(jsonObjectRequest, tag_json_req);
+            }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    Toast.makeText(ViewContentOfDocument.this, "Could not connect to server", Toast.LENGTH_SHORT).show();
+                }
+            });
+            VolleyAppController.getInstance().addToRequestQueue(jsonObjectRequest, tag_json_req);
 
+            return null;
+        }
+    }
+    private void saveRelationToDatabase() {
+        new AsyncSave().execute();
     }
 
     private String format(String type) {
@@ -569,7 +684,7 @@ public class ViewContentOfDocument extends AppCompatActivity {
             connectives.clear();
             connectives = relation.getConnective();
             for (int i = 0; i < connectives.size(); i++) {
-                returnString += connectives.get(i).getStart() + ":" + (int) (connectives.get(i).getEnd() - 1);
+                returnString += connectives.get(i).getStart() + ":" + (int) (connectives.get(i).getEnd());
                 if (i != connectives.size() - 1) {
                     returnString += ";";
                 }
@@ -578,7 +693,7 @@ public class ViewContentOfDocument extends AppCompatActivity {
             arg1.clear();
             arg1 = relation.getArg1();
             for (int i = 0; i < arg1.size(); i++) {
-                returnString += arg1.get(i).getStart() + ":" + (int) (arg1.get(i).getEnd() - 1);
+                returnString += arg1.get(i).getStart() + ":" + (int) (arg1.get(i).getEnd());
                 if (i != arg1.size() - 1) {
                     returnString += ";";
                 }
@@ -587,7 +702,7 @@ public class ViewContentOfDocument extends AppCompatActivity {
             arg2.clear();
             arg2 = relation.getArg2();
             for (int i = 0; i < arg2.size(); i++) {
-                returnString += arg2.get(i).getStart() + ":" + (int) (arg2.get(i).getEnd() - 1);
+                returnString += arg2.get(i).getStart() + ":" + (int) (arg2.get(i).getEnd());
                 if (i != arg2.size() - 1) {
                     returnString += ";";
                 }
@@ -599,7 +714,7 @@ public class ViewContentOfDocument extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        SharedPreferences.Editor editor=relationSharedPreferences.edit();
+        SharedPreferences.Editor editor = relationSharedPreferences.edit();
         editor.remove(Config.savedRelation);
         editor.commit();
     }

@@ -1,26 +1,15 @@
 package com.example.sarthak.ir_annotation_tool;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.BitmapFactory;
-import android.graphics.Typeface;
-import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
-import android.support.v7.app.ActionBar;
-import android.support.v7.view.ActionMode;
-import android.text.SpannableStringBuilder;
-import android.text.style.CharacterStyle;
-import android.text.style.StyleSpan;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.example.sarthak.ir_annotation_tool.ObjectClasses.Relation;
 import com.example.sarthak.ir_annotation_tool.ObjectClasses.Sentence;
@@ -102,7 +91,7 @@ public class AdditionalMenuForRelations implements android.view.ActionMode.Callb
                                 String temp=sharedPreferences.getString(Config.savedRelation,"");
                                 if(temp!=null && !temp.isEmpty() && !temp.trim().equals("")) {
                                     relation = gson.fromJson(temp, Relation.class);
-                                    if (relation.isFilled() && allowed==1) {
+                                    if (relation.isFilled() || allowed==0) {
                                         floatingActionButton.setImageBitmap(BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_done_white_24dp));
                                     } else {
                                         floatingActionButton.setImageBitmap(BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_add_white_24dp));

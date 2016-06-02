@@ -1,11 +1,8 @@
 package com.example.sarthak.ir_annotation_tool;
 
-import android.app.SearchManager;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
@@ -17,9 +14,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
-import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.webkit.WebView;
@@ -27,19 +21,12 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Toast;
 
-import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonArrayRequest;
-import com.android.volley.toolbox.JsonObjectRequest;
 import com.example.sarthak.ir_annotation_tool.NetworkClasses.VolleyAppController;
 import com.example.sarthak.ir_annotation_tool.ObjectClasses.DocumentObject;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -98,7 +85,6 @@ public class ListOfDocuments extends AppCompatActivity {
                         startActivity(intent);
                         finish();
                 }
-                Toast.makeText(ListOfDocuments.this, menuItem.getTitle(), Toast.LENGTH_LONG).show();
                 return true;
             }
         });
@@ -140,7 +126,7 @@ public class ListOfDocuments extends AppCompatActivity {
     }
 
     private void populateDocumentNames(){
-        pDialog=new SweetAlertDialog(ListOfDocuments.this);
+        pDialog=new SweetAlertDialog(ListOfDocuments.this,SweetAlertDialog.PROGRESS_TYPE);
         pDialog.setTitleText("Fetching documents");
         pDialog.getProgressHelper().setBarColor(Color.parseColor("#A5DC86"));
 
@@ -208,5 +194,12 @@ public class ListOfDocuments extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        pDialog.dismiss();
+        pDialog=null;
     }
 }

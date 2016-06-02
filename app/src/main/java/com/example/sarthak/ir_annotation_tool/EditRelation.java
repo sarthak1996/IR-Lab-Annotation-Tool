@@ -3,9 +3,8 @@ package com.example.sarthak.ir_annotation_tool;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.graphics.Typeface;
-import android.hardware.SensorEvent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -15,7 +14,6 @@ import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.Toolbar;
 import android.text.Layout;
 import android.text.Spannable;
@@ -47,15 +45,12 @@ import com.google.gson.Gson;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
+import java.util.Iterator;
 import java.util.Map;
+
+import cn.pedant.SweetAlert.SweetAlertDialog;
 
 /**
  * Created by sarthak on 20/5/16.
@@ -69,6 +64,7 @@ public class EditRelation extends AppCompatActivity {
     private int selectionEnd = -1;
     private TextView textViewContent;
     private String docId;
+    private SweetAlertDialog progressDialog;
     private String typeClicked = "";
     private int index = -1;
     private int removeIndex = -1;
@@ -96,10 +92,8 @@ public class EditRelation extends AppCompatActivity {
             docId = intent.getStringExtra(Config.docId);
             doc_name = intent.getStringExtra(Config.docName);
             initialiseElements();
-            SharedPreferences.Editor editor = relationSharedPreferences.edit();
-            editor.putString(Config.savedRelation, intent.getStringExtra(Config.relation));
-            editor.commit();
-            Toast.makeText(EditRelation.this, "Connective:" + relation.getConnective(), Toast.LENGTH_SHORT).show();
+            getRelationData();
+
             Typeface gujaratiTypeface = Typeface.createFromAsset(getAssets(), font);
             textViewContent.setTypeface(gujaratiTypeface);
             fetchContent();
@@ -332,7 +326,6 @@ public class EditRelation extends AppCompatActivity {
     }
 
     private int getSelectionEnd() {
-        //Toast.makeText(ViewContentOfDocument.this, ""+textViewContent.getSelectionEnd(), Toast.LENGTH_SHORT).show();
         SharedPreferences pref = getSharedPreferences(Config.sentenceFolder, MODE_PRIVATE);
         SharedPreferences.Editor editor = pref.edit();
         editor.putInt(Config.savedSentenceStart, textViewContent.getSelectionStart());
@@ -356,33 +349,30 @@ public class EditRelation extends AppCompatActivity {
         params.put("password", sharedPreferences.getString(Config.password, ""));
         //params.put("doc_path", "/media/Annotation_Interface/data/raw/a");
         params.put("doc_path", docId);
+        progressDialog.setTitle("Fetching content");
+        progressDialog.show();
         Log.d("Url DOc", "d" + sharedPreferences.getString(Config.userName, "") + "v" + sharedPreferences.getString(Config.password, ""));
 //
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url, new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
+                progressDialog.hide();
+                progressDialog.dismiss();
                 content = response;
                 Log.d("Content", "here" + response);
                 Typeface gujaratiTypeface = Typeface.createFromAsset(getAssets(), font);
                 textViewContent.setTypeface(gujaratiTypeface);
-//                content="અમદાવાદ, સોમવાર\n" +
-//                        "અમરાઇવાડી તેમજ નોબલનગર ખાતે ગઇકાલે જુદાજુદા સમયે બનેલા જીવલેણ હુમલાના બનાવમાં બે વ્યક્તિઓને ઈજાઓ પહોંચતા તેમને તાત્કાલિક સારવાર માટે હોસ્પિટલ ખાતે દાખલ કરવામાં આવી હતી.\n" +
-//                        "અમરાઇવાડીની ઘટનામાં ધંધાકીય અદાવત ને નોબલનગરમાં પ્રેમ પ્રકરણ કારણભૂત\n" +
-//                        "પોલીસ સુત્રો દ્વારા જાણવા મળ્યા મુજબ અમરાઇવાડી શ્રીનાથનગર ખાતે રહેતા જશબીરસીંગ રામસીંગ ગીલ (ઉ.વ. ૩૨) ઉપર તેમની બાજુમાં રહેતા હલબારસીંગ મુખત્યારસીંગ સરદારે ગઇકાલે બપોરે ૨ વાગે તેમના ઘર પાછળ આવેલી ઈંડાની દુકાન આગળ ધંધાકીય અદાવતને લીધે ગુપ્તીથી હુમલો કરીને તેમને ગંભીર ઈજા પહોંચાડી હતી. આથી જશબીરસીંગને તાત્કાલિક સારવાર માટે એલ.જી. હોસ્પિટલ ખાતે દાખલ કરીને અમરાઇવાડી પોલીસે ગુનો નોંધીને વધુ તપાસ હાથ ધરી છે.\n" +
-//                        "જ્યારે નોબલનગર સુતરના કારખાના પાસે ઈન્દીરાનગરના છાપરા ખાતે રહેતા કેશરબેન ભગાજી ઠાકોરની પુત્રીએ છારા યુવાન સાથે લગ્ન કરી લેતા ઉશ્કેરાયેલા કેશરબેનના જેઠ તેમજ દિયરો (૧) ખયાજી ધારસીંગ ઠાકોર, (૨) બાવાજી ધારસીંગ ઠાકોર, (૩) દીનાજી ધારસીંગજી ઠાકોર, અને (૪) કરમણજી ધારસીંગજી ઠાકોર મળીને ગઇ તા. ૨૯મીની રાત્રે ૯.૩૦ વાગ્યાના સુમારે તેની ઉપર હુમલો કર્યો હતો અને ગડદાપાટુનો માર મારવા લાગ્યા હતા. દરમ્યાનમાં તેમની દેરાણી ત્યાં આવી પહોંચી હતી. તેને જોઇને કેશરબેને જણાવ્યું હતું કે મારી પુત્રીએ તેના મન પસંદ યુવક સાથે લગ્ન કરી લીધા તેમાં શું થઇ ગયું? આ સાંભળીને ખયાજી ઠાકોર એકદમ ઉશ્કેરાઇ ગયા હતા અને બાજુમાં પડેલો પ્રાયમસ ઉઠાવીને કેશરબેન ઉપર ફેંકતા કેશરબેન ગંભીર રીતે દાઝી જતાં તેમને તાત્કાલિક સારવાર માટે સિવિલ હોસ્પિટલ ખાતે ખસેડીને સરદારનગર પોલીસે વધુ તપાસ હાથ ધરી છે.\n" +
-//                        "3741";
-
-
                 textViewContent.setText(content);
                 SharedPreferences.Editor editor = relationSharedPreferences.edit();
                 editor.putString(Config.contentOfDocument, content);
                 editor.commit();
-                Toast.makeText(EditRelation.this, "Showing content", Toast.LENGTH_SHORT).show();
             }
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                Toast.makeText(EditRelation.this, "" + error.getMessage(), Toast.LENGTH_SHORT).show();
+                progressDialog.hide();
+                progressDialog.dismiss();
+                Toast.makeText(EditRelation.this, "Could not get response from server", Toast.LENGTH_SHORT).show();
             }
         }) {
             @Override
@@ -407,6 +397,7 @@ public class EditRelation extends AppCompatActivity {
         relationSharedPreferences = getSharedPreferences(Config.relationFolder, MODE_PRIVATE);
         sharedPreferences = getSharedPreferences(Config.loginPrefs, MODE_PRIVATE);
         floatingActionButton.setImageBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.ic_done_white_24dp));
+        progressDialog = new SweetAlertDialog(EditRelation.this, SweetAlertDialog.PROGRESS_TYPE);
     }
 
     @Override
@@ -424,7 +415,10 @@ public class EditRelation extends AppCompatActivity {
                 if (typeClicked.equals("connective")) {
                     String text = textViewContent.getText().toString();
                     Spannable spannable = Spannable.Factory.getInstance().newSpannable(text);
-                    spannable.setSpan(new BackgroundColorSpan(Color.TRANSPARENT), connectives.get(removeIndex).getStart(), connectives.get(removeIndex).getEnd(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    for (int i = 0; i < connectives.size(); i++) {
+                        if (i != removeIndex)
+                            spannable.setSpan(new BackgroundColorSpan(0x80FFFF00), connectives.get(i).getStart(), connectives.get(i).getEnd(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
                     textViewContent.setText(spannable);
                     Log.d("Size+=", "" + relation.getConnective().size());
                     relation.getConnective().remove(removeIndex);
@@ -438,7 +432,10 @@ public class EditRelation extends AppCompatActivity {
 
                     String text = textViewContent.getText().toString();
                     Spannable spannable = Spannable.Factory.getInstance().newSpannable(text);
-                    spannable.setSpan(new BackgroundColorSpan(Color.TRANSPARENT), arg1.get(removeIndex).getStart(), arg1.get(removeIndex).getEnd(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    for (int i = 0; i < arg1.size(); i++) {
+                        if (i != removeIndex)
+                            spannable.setSpan(new BackgroundColorSpan(0x80FFFF00), arg1.get(i).getStart(), arg1.get(i).getEnd(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
                     relation.getArg1().remove(removeIndex);
                     SharedPreferences.Editor editor = relationSharedPreferences.edit();
                     Gson gson = new Gson();
@@ -449,7 +446,10 @@ public class EditRelation extends AppCompatActivity {
 
                     String text = textViewContent.getText().toString();
                     Spannable spannable = Spannable.Factory.getInstance().newSpannable(text);
-                    spannable.setSpan(new BackgroundColorSpan(Color.TRANSPARENT), arg2.get(removeIndex).getStart(), arg2.get(removeIndex).getEnd(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    for (int i = 0; i < arg2.size(); i++) {
+                        if (i != removeIndex)
+                            spannable.setSpan(new BackgroundColorSpan(0x80FFFF00), arg2.get(i).getStart(), arg2.get(i).getEnd(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
                     relation.getArg2().remove(removeIndex);
                     SharedPreferences.Editor editor = relationSharedPreferences.edit();
                     Gson gson = new Gson();
@@ -458,7 +458,6 @@ public class EditRelation extends AppCompatActivity {
                     getArg2s();
                 }
                 deleteAttr.setVisible(false);
-                Toast.makeText(EditRelation.this, "Deleted" + removeIndex, Toast.LENGTH_SHORT).show();
                 break;
             case R.id.discardChangesRelation:
                 onBackPressed();
@@ -548,7 +547,8 @@ public class EditRelation extends AppCompatActivity {
         params.put("arg2", format("arg2"));
         params.put("sense", relation.getRelationSense());
         params.put("edit_relation_id", relation.getRelation_id() + "");
-
+        progressDialog.setTitle("Updating changes");
+        progressDialog.show();
 
         String tag_json_req = "json_obj_req";
 
@@ -558,22 +558,27 @@ public class EditRelation extends AppCompatActivity {
             public void onResponse(JSONObject response) {
                 try {
                     if (response.getInt("success") == 1) {
+                        progressDialog.hide();
                         Toast.makeText(EditRelation.this, response.getString("message"), Toast.LENGTH_SHORT).show();
                         SharedPreferences.Editor editor = relationSharedPreferences.edit();
                         editor.remove(Config.savedRelation);
                         editor.commit();
+                        Log.d("TEMP", "" + response.getString("message") + relation.getConnective().get(1).getStart());
                         finish();
                     } else {
+                        progressDialog.hide();
                         Toast.makeText(EditRelation.this, response.getString("message"), Toast.LENGTH_SHORT).show();
                         finish();
                     }
                 } catch (JSONException e) {
+                    progressDialog.hide();
                     e.printStackTrace();
                 }
             }
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
+                progressDialog.hide();
                 Toast.makeText(EditRelation.this, "Could not connect to server", Toast.LENGTH_SHORT).show();
                 finish();
             }
@@ -588,7 +593,7 @@ public class EditRelation extends AppCompatActivity {
             connectives.clear();
             connectives = relation.getConnective();
             for (int i = 0; i < connectives.size(); i++) {
-                returnString += connectives.get(i).getStart() + ":" + (int) (connectives.get(i).getEnd() - 1);
+                returnString += connectives.get(i).getStart() + ":" + (int) (connectives.get(i).getEnd());
                 if (i != connectives.size() - 1) {
                     returnString += ";";
                 }
@@ -597,7 +602,7 @@ public class EditRelation extends AppCompatActivity {
             arg1.clear();
             arg1 = relation.getArg1();
             for (int i = 0; i < arg1.size(); i++) {
-                returnString += arg1.get(i).getStart() + ":" + (int) (arg1.get(i).getEnd() - 1);
+                returnString += arg1.get(i).getStart() + ":" + (int) (arg1.get(i).getEnd());
                 if (i != arg1.size() - 1) {
                     returnString += ";";
                 }
@@ -606,7 +611,7 @@ public class EditRelation extends AppCompatActivity {
             arg2.clear();
             arg2 = relation.getArg2();
             for (int i = 0; i < arg2.size(); i++) {
-                returnString += arg2.get(i).getStart() + ":" + (int) (arg2.get(i).getEnd() - 1);
+                returnString += arg2.get(i).getStart() + ":" + (int) (arg2.get(i).getEnd());
                 if (i != arg2.size() - 1) {
                     returnString += ";";
                 }
@@ -622,4 +627,116 @@ public class EditRelation extends AppCompatActivity {
         editor.clear();
         editor.commit();
     }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        progressDialog.dismiss();
+        progressDialog = null;
+    }
+
+    class AsyncPopulateRelation extends AsyncTask<Void, Void, Void> {
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            progressDialog.hide();
+            super.onPostExecute(aVoid);
+        }
+
+        @Override
+        protected void onPreExecute() {
+            progressDialog.setTitleText("Getting Relations");
+            progressDialog.show();
+            super.onPreExecute();
+        }
+
+        @Override
+        protected Void doInBackground(Void... param) {
+
+            String tag_json_req = "json_obj_req";
+
+            Map<String, String> params = new HashMap<String, String>();
+            params.put("username", sharedPreferences.getString(Config.userName, ""));
+            params.put("password", sharedPreferences.getString(Config.password, ""));
+            params.put("doc_id", doc_name);
+
+            String url = Config.baseIp + "/gujarati_connective/Android/getRelation.php";
+            CustomJsonObjectRequest jsonObjectRequest = new CustomJsonObjectRequest(Request.Method.POST, url, params, new Response.Listener<JSONObject>() {
+                @Override
+                public void onResponse(JSONObject response) {
+                    try {
+                        if (response.getInt("success") == 1) {
+                            JSONObject jsonArray = response.getJSONObject("message");
+                            Iterator<?> keys = jsonArray.keys();
+                            String temp = "";
+                            while (keys.hasNext()) {
+                                String key = (String) keys.next();
+                                if (Integer.parseInt(key) == relation.getRelation_id()) {
+                                    JSONObject jsonObject = jsonArray.getJSONObject(key);
+                                    Relation relation = new Relation(jsonObject.getString("relation_name"), jsonObject.getString("sense"));
+                                    Log.d("Res", jsonObject.toString());
+                                    relation.setRelation_id(Integer.parseInt(key));
+                                    String connective = jsonObject.getString("connective_span");
+                                    Log.d("ConnectiveKey", connective + "@" + key);
+                                    String splitConnective[] = connective.split(";");
+                                    Log.d("length", "" + splitConnective.length);
+                                    for (int i = 0; i < splitConnective.length; i++) {
+                                        String boundsConnective[] = splitConnective[i].trim().split(":");
+                                        if (boundsConnective[0].isEmpty() && boundsConnective[0].trim().equals("")) {
+                                            continue;
+                                        }
+                                        relation.getConnective().add(new Sentence(Integer.parseInt(boundsConnective[0]), Integer.parseInt(boundsConnective[1]), docId));
+                                    }
+
+                                    String arg1 = jsonObject.getString("arg1_span");
+                                    String splitArg1[] = arg1.split(";");
+                                    for (int i = 0; i < splitArg1.length; i++) {
+                                        String boundsArg1[] = splitArg1[i].split(":");
+                                        if (boundsArg1[0].isEmpty() && boundsArg1[0].trim().equals("")) {
+                                            continue;
+                                        }
+                                        relation.getArg1().add(new Sentence(Integer.parseInt(boundsArg1[0]), Integer.parseInt(boundsArg1[1]), docId));
+                                    }
+
+                                    String arg2 = jsonObject.getString("arg2_span");
+                                    String splitArg2[] = arg2.split(";");
+                                    for (int i = 0; i < splitArg2.length; i++) {
+                                        String boundsArg2[] = splitArg2[i].split(":");
+                                        if (boundsArg2[0].isEmpty() && boundsArg2[0].trim().equals("")) {
+                                            continue;
+                                        }
+                                        relation.getArg2().add(new Sentence(Integer.parseInt(boundsArg2[0]), Integer.parseInt(boundsArg2[1]), docId));
+                                    }
+                                    Gson gson=new Gson();
+                                    SharedPreferences.Editor editor = relationSharedPreferences.edit();
+                                    editor.putString(Config.savedRelation, gson.toJson(relation));
+                                    editor.commit();
+                                }
+                                Log.d("Response", temp);
+                            }
+
+                        } else {
+                            Toast.makeText(EditRelation.this, response.getString("message"), Toast.LENGTH_SHORT).show();
+                        }
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    Toast.makeText(EditRelation.this, error.getMessage(), Toast.LENGTH_SHORT).show();
+                    Log.d("Something", error.getMessage());
+                }
+            });
+            VolleyAppController.getInstance().addToRequestQueue(jsonObjectRequest, tag_json_req);
+            return null;
+        }
+    }
+
+    private void getRelationData() {
+        new AsyncPopulateRelation().execute();
+    }
+
+
 }
