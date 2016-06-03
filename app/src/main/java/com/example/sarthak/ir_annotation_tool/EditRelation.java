@@ -130,15 +130,18 @@ public class EditRelation extends AppCompatActivity {
                                                                          typeClicked = "arg2";
                                                                          return true;
                                                                      case R.id.navigation_item_List_Document:
+                                                                         typeClicked="";
                                                                          onBackPressed();
                                                                          return true;
                                                                      case R.id.navigation_item_Content_Document:
+                                                                         typeClicked="";
                                                                          updateRelation();
                                                                          deleteAttr.setVisible(false);
                                                                          fetchContent();
                                                                          textViewContent.setText(content);
                                                                          return true;
                                                                      case R.id.navigation_item_relationName_relationAttrs:
+                                                                         typeClicked="";
                                                                          updateRelation();
                                                                          MaterialDialog dialog1 = new MaterialDialog.Builder(EditRelation.this)
                                                                                  .title("Enter Relation Name")
@@ -194,8 +197,10 @@ public class EditRelation extends AppCompatActivity {
                                                                                  radioGroup.check(R.id.entRel_relation);
                                                                              }
                                                                          }
+                                                                         Toast.makeText(EditRelation.this, ""+relation.getRelationName(), Toast.LENGTH_SHORT).show();
                                                                          return true;
                                                                      case R.id.navigation_item_relationSense_relationAttrs:
+                                                                         typeClicked="";
                                                                          updateRelation();
                                                                          MaterialDialog dialog2 = new MaterialDialog.Builder(EditRelation.this)
                                                                                  .title("Enter Relation Sense")
@@ -229,6 +234,7 @@ public class EditRelation extends AppCompatActivity {
                                                                          }
                                                                          return true;
                                                                      case R.id.navigation_item_SignOut:
+                                                                         typeClicked="";
                                                                          SharedPreferences.Editor editor = sharedPreferences.edit();
                                                                          editor.putBoolean(Config.isLoggedIn, false);
                                                                          editor.commit();
@@ -247,7 +253,7 @@ public class EditRelation extends AppCompatActivity {
         textViewContent.setText(content);
         textViewContent.setCustomSelectionActionModeCallback(new
 
-                AdditionalMenuForRelations(EditRelation.this, docId, textViewContent, floatingActionButton, 0)
+                AdditionalMenuForRelations(EditRelation.this, docId, textViewContent, floatingActionButton, 0,typeClicked)
 
         );
         textViewContent.setOnTouchListener(new View.OnTouchListener()
@@ -261,7 +267,6 @@ public class EditRelation extends AppCompatActivity {
                                                    if (layout != null) {
                                                        int line = layout.getLineForVertical(y);
                                                        int offset = layout.getOffsetForHorizontal(line, x);
-                                                       Log.v("index", "" + offset);
                                                        int flag = -1;
 
                                                        index = flag;
@@ -563,7 +568,7 @@ public class EditRelation extends AppCompatActivity {
                         SharedPreferences.Editor editor = relationSharedPreferences.edit();
                         editor.remove(Config.savedRelation);
                         editor.commit();
-                        Log.d("TEMP", "" + response.getString("message") + relation.getConnective().get(1).getStart());
+                        //Log.d("TEMP", "" + response.getString("message") + relation.getConnective().get(1).getStart());
                         finish();
                     } else {
                         progressDialog.hide();

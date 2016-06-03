@@ -18,4 +18,5 @@ public interface Config {
     public final String userName="userName";
     public final String password="password";
     public final String relation="relation";
+    public final String checkedRelation="checkedRelation";
 }

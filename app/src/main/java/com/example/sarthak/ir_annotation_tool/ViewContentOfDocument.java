@@ -124,15 +124,18 @@ public class ViewContentOfDocument extends AppCompatActivity {
                                                                          highlightArg2();
                                                                          return true;
                                                                      case R.id.navigation_item_List_Document:
+                                                                         typeClicked="";
                                                                          onBackPressed();
                                                                          return true;
                                                                      case R.id.navigation_item_Content_Document:
+                                                                         typeClicked="";
                                                                          updateRelation();
                                                                          deleteAttr.setVisible(false);
                                                                          fetchContent();
                                                                          textViewContent.setText(content);
                                                                          return true;
                                                                      case R.id.navigation_item_relationName_relationAttrs:
+                                                                         typeClicked="";
                                                                          updateRelation();
                                                                          MaterialDialog dialog1 = new MaterialDialog.Builder(ViewContentOfDocument.this)
                                                                                  .title("Enter Relation Name")
@@ -190,6 +193,7 @@ public class ViewContentOfDocument extends AppCompatActivity {
                                                                          }
                                                                          return true;
                                                                      case R.id.navigation_item_relationSense_relationAttrs:
+                                                                         typeClicked="";
                                                                          updateRelation();
                                                                          MaterialDialog dialog2 = new MaterialDialog.Builder(ViewContentOfDocument.this)
                                                                                  .title("Enter Relation Sense")
@@ -223,6 +227,7 @@ public class ViewContentOfDocument extends AppCompatActivity {
                                                                          }
                                                                          return true;
                                                                      case R.id.navigation_item_SignOut:
+                                                                         typeClicked="";
                                                                          SharedPreferences.Editor editor = sharedPreferences.edit();
                                                                          editor.putBoolean(Config.isLoggedIn, false);
                                                                          editor.commit();
@@ -241,7 +246,7 @@ public class ViewContentOfDocument extends AppCompatActivity {
         textViewContent.setText(content);
         textViewContent.setCustomSelectionActionModeCallback(new
 
-                AdditionalMenuForRelations(ViewContentOfDocument.this, docId, textViewContent, floatingActionButton)
+                AdditionalMenuForRelations(ViewContentOfDocument.this, docId, textViewContent, floatingActionButton,typeClicked)
 
         );
         textViewContent.setOnTouchListener(new View.OnTouchListener()
@@ -255,7 +260,6 @@ public class ViewContentOfDocument extends AppCompatActivity {
                                                    if (layout != null) {
                                                        int line = layout.getLineForVertical(y);
                                                        int offset = layout.getOffsetForHorizontal(line, x);
-                                                       Log.v("index", "" + offset);
                                                        int flag = -1;
 
                                                        index = flag;
@@ -717,5 +721,12 @@ public class ViewContentOfDocument extends AppCompatActivity {
         SharedPreferences.Editor editor = relationSharedPreferences.edit();
         editor.remove(Config.savedRelation);
         editor.commit();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        pdialog.dismiss();
+        pdialog=null;
     }
 }

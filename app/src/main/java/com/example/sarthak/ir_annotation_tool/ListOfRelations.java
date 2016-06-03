@@ -6,24 +6,22 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.NavigationView;
-import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
 import android.widget.Toast;
 
 import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.example.sarthak.ir_annotation_tool.Adapters.RelationRecyclerAdapter;
 import com.example.sarthak.ir_annotation_tool.NetworkClasses.VolleyAppController;
 import com.example.sarthak.ir_annotation_tool.ObjectClasses.Relation;
 import com.example.sarthak.ir_annotation_tool.ObjectClasses.Sentence;
@@ -43,19 +41,17 @@ import cn.pedant.SweetAlert.SweetAlertDialog;
  * Created by sarthak on 20/5/16.
  */
 public class ListOfRelations extends AppCompatActivity {
-    private DrawerLayout drawerLayout;
-    private NavigationView navigationView;
     private LinearLayoutManager linearLayoutManager;
     private Toolbar toolbar;
-    private RadioButton radioButton;
     private SweetAlertDialog progressDialog;
     private String docName = "";
     private ArrayList<Relation> relationObjects;
-    private RadioGroup radioGroup;
     private String docId;
     private FloatingActionButton floatingActionButton;
     private int selectedRelation;
     private MenuItem deleteMenu;
+    private RecyclerView recyclerView;
+    private RelationRecyclerAdapter adapter;
     private SharedPreferences sharedPreferences;
 
     @Override
@@ -75,31 +71,14 @@ public class ListOfRelations extends AppCompatActivity {
         actionBar.setDisplayHomeAsUpEnabled(true);
         actionBar.setTitle("Choose a Relation");
 
-        navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
-            @Override
-            public boolean onNavigationItemSelected(MenuItem menuItem) {
-                menuItem.setChecked(true);
-                drawerLayout.closeDrawers();
-                return true;
-            }
-        });
 
         populateRelationNames();
 
-        radioGroup.setOrientation(RadioGroup.VERTICAL);
-
-        radioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(RadioGroup group, int checkedId) {
-                selectedRelation = checkedId;
-                deleteMenu.setVisible(true);
-            }
-        });
 
         floatingActionButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                int checked = radioGroup.getCheckedRadioButtonId();
+                int checked = getSharedPreferences(Config.relationFolder,MODE_PRIVATE).getInt(Config.checkedRelation,-1);
                 if (checked != -1) {
                     /*Navigate to the content of the Relation*/
                     Intent intent = new Intent(ListOfRelations.this, EditRelation.class);
@@ -111,18 +90,19 @@ public class ListOfRelations extends AppCompatActivity {
                 }
             }
         });
+        recyclerView.setLayoutManager(linearLayoutManager);
+        adapter=new RelationRecyclerAdapter(relationObjects,ListOfRelations.this);
+        recyclerView.setAdapter(adapter);
 
     }
 
     private void initialiseElements() {
         toolbar = (Toolbar) findViewById(R.id.toolbar_list_of_Relations);
-        drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
-        navigationView = (NavigationView) findViewById(R.id.navigation_view);
         linearLayoutManager = new LinearLayoutManager(ListOfRelations.this);
         sharedPreferences = getSharedPreferences(Config.loginPrefs, MODE_PRIVATE);
         linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
         relationObjects = new ArrayList<>();
-        radioGroup = (RadioGroup) findViewById(R.id.radioGroup_ListOfRelations);
+        recyclerView=(RecyclerView)findViewById(R.id.recyclerView_Relations);
         floatingActionButton = (FloatingActionButton) findViewById(R.id.fab_RelationSelected);
         progressDialog = new SweetAlertDialog(ListOfRelations.this, SweetAlertDialog.PROGRESS_TYPE);
     }
@@ -131,6 +111,7 @@ public class ListOfRelations extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(Void aVoid) {
+            adapter.notifyDataSetChanged();
             progressDialog.hide();
             super.onPostExecute(aVoid);
         }
@@ -202,15 +183,6 @@ public class ListOfRelations extends AppCompatActivity {
                             }
                             Log.d("Response", temp);
 
-                            for (int i = 0; i < relationObjects.size(); i++) {
-                                radioButton = new RadioButton(ListOfRelations.this);
-                                radioButton.setText(relationObjects.get(i).getRelationSense());
-                                radioButton.setTextSize(20);
-                                radioButton.setId(i);
-                                radioButton.setPaddingRelative(40, 20, 20, 40);
-                                radioGroup.addView(radioButton);
-                            }
-
                         } else {
                             Toast.makeText(ListOfRelations.this, response.getString("message"), Toast.LENGTH_SHORT).show();
                         }
@@ -239,6 +211,8 @@ public class ListOfRelations extends AppCompatActivity {
         MenuInflater menuInflater = getMenuInflater();
         menuInflater.inflate(R.menu.menu_list_of_relations, menu);
         deleteMenu = menu.findItem(R.id.deleteRelation);
+        Log.d("DELMENU",""+deleteMenu);
+        adapter.setDeleteMenuItem(deleteMenu);
         return true;
     }
 
@@ -264,7 +238,7 @@ public class ListOfRelations extends AppCompatActivity {
 
     private void deleteRelation() {
         String tag_json_req = "json_obj_req";
-        int relation_id = radioGroup.getCheckedRadioButtonId();
+        final int relation_id = getSharedPreferences(Config.relationFolder,MODE_PRIVATE).getInt(Config.checkedRelation,-1);
         Map<String, String> params = new HashMap<String, String>();
         params.put("username", sharedPreferences.getString(Config.userName, ""));
         params.put("password", sharedPreferences.getString(Config.password, ""));
@@ -281,18 +255,11 @@ public class ListOfRelations extends AppCompatActivity {
                 try {
                     if (response.getInt("success") == 1) {
                         Toast.makeText(ListOfRelations.this, response.getString("message"), Toast.LENGTH_SHORT).show();
-                        relationObjects.remove(selectedRelation);
-                        radioGroup.removeAllViewsInLayout();
-                        radioGroup.removeAllViews();
-                        for (int i = 0; i < relationObjects.size(); i++) {
-                            radioButton = new RadioButton(ListOfRelations.this);
-                            radioButton.setText(relationObjects.get(i).getRelationSense());
-                            radioButton.setTextSize(20);
-                            radioButton.setId(i);
-                            radioButton.setPaddingRelative(40, 20, 20, 40);
-                            radioGroup.addView(radioButton);
-                        }
-                        radioGroup.clearCheck();
+                        relationObjects.remove(relation_id);
+                        SharedPreferences.Editor editor=getSharedPreferences(Config.relationFolder,MODE_PRIVATE).edit();
+                        editor.putInt(Config.checkedRelation,-1);
+                        editor.commit();
+                        adapter.notifyDataSetChanged();
                         deleteMenu.setVisible(false);
                     } else {
                         Toast.makeText(ListOfRelations.this, response.getString("message"), Toast.LENGTH_SHORT).show();
